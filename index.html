@@ -206,16 +206,27 @@
         const ADMIN_PIN = "1234"; 
         const CATEGORIES = ["HADIR", "CUTI/EL", "KURSUS/MEETING", "MC/TCA", "BEKERJA DI LAPANGAN", "Off"];
 
+        // Nama dibersihkan daripada trailing spaces dan format diselaraskan
         const STAFF_NAMES = [
-            "DR SURIANI BINTI NOOR AZAM ", "NOR ZAMANI BINTI SHARIF", "SITI KHADIJAH BINTI ARIFFIN", "AZLINA BINTI ARIFFIN", "MOHAMAD SHUKRI BIN OTHMAN",
+            "DR SURIANI BINTI NOOR AZAM", "NOR ZAMANI BINTI SHARIF", "SITI KHADIJAH BINTI ARIFFIN", "AZLINA BINTI ARIFFIN", "MOHAMAD SHUKRI BIN OTHMAN",
             "ASMA BINTI ABDULLAH", "NOR HAFIZIE AZLY BIN YACOB", "MOHAMAD NAZRI BIN HASSAN", "MOHD. SHAHIR BIN ISMAIL", "NOR AQILAH BINTI KARIM", "RAHIMAH BINTI MAHMUD",
-            "KHALIJAH BINTI ABDUL RASHID", "ISWARDI BIN ISMAIL", "NURALIA ILYANA BINTI IBRAHIM", "AHMAD FIKRI BIN ABU BAKAR", "SHARIFFAH IMAMAH BINTI HUSSEIN KAMAL ", "AZIZI BIN ABDULLAH",
+            "KHALIJAH BINTI ABDUL RASHID", "ISWARDI BIN ISMAIL", "NURALIA ILYANA BINTI IBRAHIM", "AHMAD FIKRI BIN ABU BAKAR", "SHARIFFAH IMAMAH BINTI HUSSEIN KAMAL", "AZIZI BIN ABDULLAH",
             "SYAHRUL MUNIR BIN SOBRI", "SITI AISHAH BINTI CHE 'ISHAK", "NOR AZIAH BINTI MOHD JUNUS", "MOHAMMAD AZRI BIN AYOUB", "MOHD HALMI BIN AHMAD ASRI", "ABDUL RAHMAN BIN DZULKIFLI", "JAMILAH BINTI HALIM@BAKAR",
-            "MUHAMMAD  ALIFF ASYRAFF BIN MOHD HAMDAN", "KAK MAH", "NORHANEZA BINTI MOHAMED", "SALWANI BINTI MD YUNUS", "FAIDZAL BIN AHMAD", "NORNATRAH BINTI OMAR"
+            "MUHAMMAD ALIFF ASYRAFF BIN MOHD HAMDAN", "KAK MAH", "NORHANEZA BINTI MOHAMED", "SALWANI BINTI MD YUNUS", "FAIDZAL BIN AHMAD", "NORNATRAH BINTI OMAR"
         ];
 
         let attendees = [];
         let isAdmin = false;
+
+        // Fungsi Normalisasi: Buang titik, ratakan jarak, huruf kecil.
+        // Membantu mengesan "MOHD." vs "MOHD" atau jarak berkembar.
+        function normalizeName(name) {
+            if (!name) return "";
+            return name.toLowerCase()
+                       .replace(/\./g, "")      // Buang titik
+                       .replace(/\s+/g, " ")    // Tukar pelbagai jarak ke satu jarak sahaja
+                       .trim();
+        }
 
         function getFormattedDateInfo() {
             const now = new Date();
@@ -426,9 +437,9 @@
             const unfilledList = document.getElementById('unfilledList');
             const missingCountLabel = document.getElementById('missingCount');
             
-            // Cari nama yang belum ada dalam senarai attendees
-            const attendeeNames = attendees.map(a => a.name.toLowerCase().trim());
-            const missingStaff = STAFF_NAMES.filter(name => !attendeeNames.includes(name.toLowerCase().trim()));
+            // Menggunakan normalisasi nama untuk perbandingan yang lebih tepat
+            const normalizedAttendeeNames = attendees.map(a => normalizeName(a.name));
+            const missingStaff = STAFF_NAMES.filter(name => !normalizedAttendeeNames.includes(normalizeName(name)));
             
             const now = new Date();
             const bypassMode = document.getElementById('bypassTime').checked;
@@ -509,7 +520,7 @@
 
             const success = await sendDataToServer('update', payload);
             if (success) {
-                const existingIndex = attendees.findIndex(a => a.name.toLowerCase() === nameValue.toLowerCase());
+                const existingIndex = attendees.findIndex(a => normalizeName(a.name) === normalizeName(nameValue));
                 if(existingIndex !== -1) attendees[existingIndex] = payload;
                 else attendees.push(payload);
                 
@@ -551,8 +562,8 @@
             });
 
             // Tambah staf yang belum isi ke WhatsApp jika mahu
-            const attendeeNames = attendees.map(a => a.name.toLowerCase().trim());
-            const missing = STAFF_NAMES.filter(name => !attendeeNames.includes(name.toLowerCase().trim()));
+            const attendeeNames = attendees.map(a => normalizeName(a.name));
+            const missing = STAFF_NAMES.filter(name => !attendeeNames.includes(normalizeName(name)));
             if(missing.length > 0) {
                 msg += `*BELUM MENGISI (${missing.length})*\n`;
                 missing.forEach((name, i) => msg += `${i+1}. ${name}\n`);
